@@ -11,16 +11,17 @@ class Token:
       
 class TokenType:
   # data types
-  TT_INT		  = 'INT'
-  TT_FLOAT    = 'FLOAT'
-  TT_STRING   = 'STRING'
+  TT_INT		           = 'INT'
+  TT_FLOAT             = 'FLOAT'
+  TT_STRING            = 'STRING'
+  TT_SINGLE_CHARACTER  = 'CHAR'
   
   # escape characters
-  TT_SPACE = " "
-  TT_TAB = "\t"
-  TT_SINGLE_QUOTE = "\'"
-  TT_DOUBLE_QUOTE = "\""
-  TT_NEW_LINE = "\n"
+  TT_SPACE          = " "
+  TT_TAB            = "\t"
+  TT_SINGLE_QUOTE   = "\'"
+  TT_DOUBLE_QUOTE   = "\""
+  TT_NEW_LINE       = "\n"
 
   # single-character self.tokens
   special_chars = {
@@ -153,42 +154,54 @@ class Scanner:
             current_token = ""
           clear_current_token = True
             
+          # check if the current character is a line number
           if (self.is_line_number()):
             if self.tokens.get(self.basic_line_num) == []:
               del self.tokens[self.basic_line_num]
             self.read_line_number()
             
+          # verify that the line number is added to the tokens dictionary
           if self.basic_line_num not in self.tokens:
             self.tokens.update({self.basic_line_num: []})
             
+          # if the current character is a new line, add the current token to the tokens
           if self.current_char == TokenType.TT_NEW_LINE:
             self.add_token(TokenType.TT_STRING, current_token)
             
+          # check if the current character is a numeric character
           elif self.current_char.isnumeric():
             self.tokens[self.basic_line_num].append(self.create_number())
               
+          # check if the current characyer is a special character
           elif self.current_char in TokenType.special_chars:
-            
-              if current_token.upper() in TokenType.keywords:
-                self.add_token(TokenType.TT_KEYWORD, current_token)
-                
-              elif self.current_char == "<":
-                  if self.peek_ahead() == "=":
-                    self.add_token(TokenType.LESS_OR_EQUAL)
-                    self.advance()
-                  elif self.peek_ahead() == ">":
-                    self.add_token(TokenType.NOT_EQUAL)
-                    self.advance()
-              elif self.current_char == ">":
-                  if self.peek_ahead() == "=":
-                    self.add_token(TokenType.GREATER_OR_EQUAL)
-                    self.advance()
-
-              elif current_token:
-                  self.add_token(TokenType.TT_STRING, current_token)
+            scanned_char = False
+          
+            # check if the current token name is a keyword
+            if current_token.upper() in TokenType.keywords:
+              self.add_token(TokenType.TT_KEYWORD, current_token)
               
-              else:
-                self.add_token(TokenType.special_chars.get(str(self.current_char)))
+            # if the current character is a < or >, check whether the next character is an =
+            elif self.current_char == "<":
+                if self.peek_ahead() == "=":
+                  self.add_token(TokenType.LESS_OR_EQUAL)
+                  self.advance()
+                  scanned_char = True
+                elif self.peek_ahead() == ">":
+                  self.add_token(TokenType.NOT_EQUAL)
+                  self.advance()
+                  scanned_char = True
+            elif self.current_char == ">":
+                if self.peek_ahead() == "=":
+                  self.add_token(TokenType.GREATER_OR_EQUAL)
+                  self.advance()
+                  scanned_char = True
+
+            # otherwise, if the current token is not blank, add the current token
+            elif current_token:
+                self.add_token(TokenType.TT_STRING, current_token)
+            
+            if not scanned_char:
+              self.add_token(TokenType.TT_SINGLE_CHARACTER, TokenType.special_chars.get(str(self.current_char)))
             
           elif self.current_char in [TokenType.TT_SINGLE_QUOTE, TokenType.TT_DOUBLE_QUOTE]:
             self.add_token(TokenType.TT_STRING, self.handle_string())
@@ -197,6 +210,7 @@ class Scanner:
             
             if current_token == "REM":
               self.ignore_comment()
+              clear_current_token = True
               
             elif current_token and current_token.upper() in TokenType.keywords:
               if current_token.upper() == "GOTO":
