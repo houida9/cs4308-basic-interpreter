@@ -11,17 +11,18 @@ class Token:
       
 class TokenType:
   # data types
-  TT_INT		           = 'INT'
-  TT_FLOAT             = 'FLOAT'
-  TT_STRING            = 'STRING'
-  TT_SINGLE_CHARACTER  = 'CHAR'
+  INT		         = 'INT'
+  FLOAT          = 'FLOAT'
+  STRING         = 'STRING'
+  SINGLE_CHAR    = 'CHAR'
+  REMARK         = 'REM'
   
   # escape characters
-  TT_SPACE          = " "
-  TT_TAB            = "\t"
-  TT_SINGLE_QUOTE   = "\'"
-  TT_DOUBLE_QUOTE   = "\""
-  TT_NEW_LINE       = "\n"
+  SPACE          = " "
+  TAB            = "\t"
+  SINGLE_QUOTE   = "\'"
+  DOUBLE_QUOTE   = "\""
+  NEW_LINE       = "\n"
 
   # single-character self.tokens
   special_chars = {
@@ -39,13 +40,9 @@ class TokenType:
       "<": "LESS_THAN",
       ">": "GREATER_THAN",
   }
-  
-  NOT_EQUAL = "NOT_EQUAL"
-  LESS_OR_EQUAL = "LESS_OR_EQUAL"
-  GREATER_OR_EQUAL = "GREATER_OR_EQUAL"
     
   # BASIC keywords
-  TT_KEYWORD = 'KEYWORD'
+  KEYWORD = 'KEYWORD'
   
   keywords = [
     "REM",
@@ -74,6 +71,10 @@ class TokenType:
     "MOD",
     "END"
   ]
+  
+  NOT_EQUAL = "NOT_EQUAL"
+  LESS_OR_EQUAL = "LESS_OR_EQUAL"
+  GREATER_OR_EQUAL = "GREATER_OR_EQUAL"
 
       
 class Scanner:  
@@ -97,24 +98,24 @@ class Scanner:
       return self.text[self.current_index + 1]
     
   def ignore_comment(self):
-    while self.current_char != None and self.peek_ahead() != TokenType.TT_NEW_LINE:
+    while self.current_char != None and self.peek_ahead() != TokenType.NEW_LINE:
       self.advance()
   
   def is_alphanumeric(self, char):
     return char.isalpha() or char.isnumeric() or char == "_"
       
   def handle_string(self):
-    quote = [TokenType.TT_SINGLE_QUOTE, TokenType.TT_DOUBLE_QUOTE]
+    quote = [TokenType.SINGLE_QUOTE, TokenType.DOUBLE_QUOTE]
     
     if self.current_char in quote:
-      string = TokenType.TT_DOUBLE_QUOTE
+      string = TokenType.DOUBLE_QUOTE
       self.advance()
       
       while self.current_char and self.current_char not in quote:
         string += self.current_char
         self.advance()
         
-      return string + TokenType.TT_DOUBLE_QUOTE
+      return string + TokenType.DOUBLE_QUOTE
     return ""
   
   def is_line_number(self):
@@ -165,63 +166,38 @@ class Scanner:
             self.tokens.update({self.basic_line_num: []})
             
           # if the current character is a new line, add the current token to the tokens
-          if self.current_char == TokenType.TT_NEW_LINE:
-            self.add_token(TokenType.TT_STRING, current_token)
+          if self.current_char == TokenType.NEW_LINE:
+            self.add_token(TokenType.STRING, current_token)
             
           # check if the current character is a numeric character
           elif self.current_char.isnumeric():
             self.tokens[self.basic_line_num].append(self.create_number())
               
-          # check if the current characyer is a special character
+          # check if the current character is a special character
           elif self.current_char in TokenType.special_chars:
-            scanned_char = False
-          
-            # check if the current token name is a keyword
-            if current_token.upper() in TokenType.keywords:
-              self.add_token(TokenType.TT_KEYWORD, current_token)
-              
-            # if the current character is a < or >, check whether the next character is an =
-            elif self.current_char == "<":
-                if self.peek_ahead() == "=":
-                  self.add_token(TokenType.LESS_OR_EQUAL)
-                  self.advance()
-                  scanned_char = True
-                elif self.peek_ahead() == ">":
-                  self.add_token(TokenType.NOT_EQUAL)
-                  self.advance()
-                  scanned_char = True
-            elif self.current_char == ">":
-                if self.peek_ahead() == "=":
-                  self.add_token(TokenType.GREATER_OR_EQUAL)
-                  self.advance()
-                  scanned_char = True
-
-            # otherwise, if the current token is not blank, add the current token
-            elif current_token:
-                self.add_token(TokenType.TT_STRING, current_token)
+            self.handle_special_keys(current_token)
             
-            if not scanned_char:
-              self.add_token(TokenType.TT_SINGLE_CHARACTER, TokenType.special_chars.get(str(self.current_char)))
-            
-          elif self.current_char in [TokenType.TT_SINGLE_QUOTE, TokenType.TT_DOUBLE_QUOTE]:
-            self.add_token(TokenType.TT_STRING, self.handle_string())
+          elif self.current_char in [TokenType.SINGLE_QUOTE, TokenType.DOUBLE_QUOTE]:
+            self.add_token(TokenType.STRING, self.handle_string())
               
-          elif self.current_char in [TokenType.TT_SPACE, TokenType.TT_TAB]:
+          elif self.current_char in [TokenType.SPACE, TokenType.TAB]:
             
-            if current_token == "REM":
-              self.ignore_comment()
-              clear_current_token = True
+            # check if the current token is one of the keywords              
+            if current_token and current_token.upper() in TokenType.keywords:
               
-            elif current_token and current_token.upper() in TokenType.keywords:
+              if current_token == "REM":
+                self.ignore_comment()
+                clear_current_token = True
+                
               if current_token.upper() == "GOTO":
                 if self.peek_ahead().isnumeric():
                   self.advance()
-                  self.add_token(TokenType.TT_KEYWORD, current_token, self.get_goto_line())
-              else:
-                self.add_token(TokenType.TT_KEYWORD, current_token)
+                  self.add_token(TokenType.KEYWORD, current_token, self.get_goto_line())
+              
+              self.add_token(TokenType.KEYWORD, current_token)
               
             elif current_token:
-              self.add_token(TokenType.TT_STRING, current_token)
+              self.add_token(TokenType.STRING, current_token)
                           
           elif self.is_alphanumeric(self.current_char):
             clear_current_token = False
@@ -231,7 +207,7 @@ class Scanner:
           
       if current_token and not self.current_char:
         if current_token.upper() in TokenType.keywords:
-          self.add_token(TokenType.TT_KEYWORD, current_token)
+          self.add_token(TokenType.KEYWORD, current_token)
 
       return self.tokens
     
@@ -239,6 +215,36 @@ class Scanner:
   def add_token(self, token_type, current_token=None, goto=None):
     if current_token:
       self.tokens[self.basic_line_num].append(Token(token_type, current_token, goto))
+      
+  def handle_special_keys(self, current_token):
+    scanned_char = False
+          
+    # check if the current token name is a keyword
+    if current_token.upper() in TokenType.keywords:
+      self.add_token(TokenType.KEYWORD, current_token)
+      
+    # if the current character is a < or >, check whether the next character is an =
+    elif self.current_char == "<":
+        if self.peek_ahead() == "=":
+          self.add_token(TokenType.SINGLE_CHAR, TokenType.LESS_OR_EQUAL)
+          self.advance()
+          scanned_char = True
+        elif self.peek_ahead() == ">":
+          self.add_token(TokenType.SINGLE_CHAR, TokenType.NOT_EQUAL)
+          self.advance()
+          scanned_char = True
+    elif self.current_char == ">":
+        if self.peek_ahead() == "=":
+          self.add_token(TokenType.SINGLE_CHAR, TokenType.GREATER_OR_EQUAL)
+          self.advance()
+          scanned_char = True
+
+    # otherwise, if the current token is not blank, add the current token
+    elif current_token:
+        self.add_token(TokenType.STRING, current_token)
+    
+    if not scanned_char:
+      self.add_token(TokenType.SINGLE_CHAR, TokenType.special_chars.get(str(self.current_char)))
   
   
   def create_number(self):
@@ -252,8 +258,8 @@ class Scanner:
         num_str += self.current_char
         self.advance()
         
-        if is_float: return Token(TokenType.TT_FLOAT, float(num_str)) 
-        else: return Token(TokenType.TT_INT, int(num_str))
+        if is_float: return Token(TokenType.FLOAT, float(num_str)) 
+        else: return Token(TokenType.INT, int(num_str))
         
   def get_goto_line(self):
     return self.create_number().value
