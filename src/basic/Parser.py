@@ -1,7 +1,7 @@
 from anytree import Node, RenderTree
 
-from Scanner import Scanner
-from Scanner import TokenType
+from scanner import Scanner
+from scanner import TokenType
 
 class Parser:
     def __init__(self, tokens, keywords):
@@ -18,6 +18,7 @@ class Parser:
     def addNode(self, child, parent):
         child.parent = parent
         self.currNode = child
+
     #Token Types
     INT = 'INT'
     FLOAT = 'FLOAT'
@@ -56,22 +57,27 @@ class Parser:
         for t in tok:
             if t.type == "KEYWORD":
                 k = Node("Keyword")
-                self.keyword(t.value, k)
-                self.currNode = k
-                self.addNode(k, statement)
+                if t.goto != None:
+                    self.keyword(t.value + ":" + str(t.goto), k)
+                    self.currNode = k
+                    self.addNode(k, statement)   
+                else:
+                    self.keyword(t.value, k)
+                    self.currNode = k
+                    self.addNode(k, statement)     
 
             if t.type == "CHAR":
-                if not self.char(t, tok[tok.index(t):], self.currNode):
-                    c = Node("Char")
-                    self.currNode = c
-                    self.addNode(Node(t.value), c)
-                    self.addNode(c, statement)
+                c = Node("Char")
+                self.currNode = c
+                self.addNode(Node(t.value), c)
+                self.addNode(c, statement)
 
             if t.type == "STRING":
                 s = Node("String")
                 self.currNode = s
                 self.addNode(Node(t.value), s)
                 self.addNode(s, statement)
+                
             if t.type == "INT":
                 i = Node("Int")
                 self.currNode = i
@@ -83,20 +89,13 @@ class Parser:
                 self.currNode = i
                 self.addNode(Node(t.value), i)
                 self.addNode(i, statement)
-    def char(self, tok, remainder, currNode):
-        if tok.value == "LEFT_PAREN":
-            return True
-        elif tok.value == "RIGHT_PAREN":
-            pass
-
-        return False
-            #raise error here because right
 
 
 
     def keyword(self, kw, currNode):
-        if kw in self.keywords:
+        if "GOTO" in kw or kw in self.keywords:
             self.addNode(Node(kw), currNode)
+
     def expression(self, ex, currNode):
         pass
     def factor(self):
@@ -114,7 +113,7 @@ d = {
 }
 
 l = Scanner()
-l.scan("example1.bas")
+l.scan("basic_programs/example3.bas")
 l.create_tokens()
 print(l.tokens)
 P = Parser(l.tokens, TokenType.keywords)
