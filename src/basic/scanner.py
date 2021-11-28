@@ -3,11 +3,15 @@ class Token:
         self.type = type_
         self.value = value
         self.goto = goto
+        self.checked = False
 
     def __repr__(self):
         if self.value != None and self.goto: return f'{self.type}:{self.value}:{self.goto}'
         if self.value != None: return f'{self.type}:{self.value}'
         return f'{self.type}'
+
+    def __eq__(self, other):
+        return self.value == other.value
 
 
 class TokenType:
@@ -119,10 +123,10 @@ class Scanner:
             while self.current_char and self.current_char not in quote:
                 string += self.current_char
                 self.advance()
-            
+
             self.advance()
             return Token(TokenType.STRING, string + TokenType.DOUBLE_QUOTE)
-        
+
         return Token(TokenType.STRING, "")
 
     def is_line_number(self):
@@ -165,11 +169,11 @@ class Scanner:
             # verify that the line number is added to the tokens dictionary
             if self.basic_line_num not in self.tokens:
                 self.tokens.update({self.basic_line_num: []})
-            
+
             # if the current character is a new line, add the current token to the tokens
             if self.current_char in [TokenType.NEW_LINE, TokenType.TAB, TokenType.SPACE]:
                 self.advance()
-                
+
             elif self.current_char in [TokenType.SINGLE_QUOTE, TokenType.DOUBLE_QUOTE]:
                 self.add_token(self.make_string())
 
@@ -223,40 +227,39 @@ class Scanner:
 
             num_str += self.current_char
             self.advance()
-            if self.current_char == ')': # solve right parenthesis
-              break
-            self.advance()
+            if self.current_char == ')':  # solve right parenthesis
+                break
+            #self.advance()
 
         if is_float:
-          return Token(TokenType.FLOAT, float(num_str))
+            return Token(TokenType.FLOAT, float(num_str))
         else:
-          return Token(TokenType.INT, int(num_str))
-        
+            return Token(TokenType.INT, int(num_str))
+
     def make_identifier(self):
-      id_str = ''
-      token_type = None
+        id_str = ''
+        token_type = None
 
-      while self.current_char != None and (self.current_char.isalnum() or self.current_char in '.' + '_'):
-          id_str += self.current_char
-          self.advance()
-        
-      if id_str in TokenType.keywords:
-        token_type = TokenType.KEYWORD
-        
-        if id_str == "REM":
-          self.ignore_comment()
-          return Token(TokenType.KEYWORD, id_str)
-
-        elif id_str.upper() == "GOTO":
-          if self.peek_ahead().isnumeric():
+        while self.current_char != None and (self.current_char.isalnum() or self.current_char in '.' + '_'):
+            id_str += self.current_char
             self.advance()
-            return Token(TokenType.KEYWORD, id_str, self.get_goto_line())
-        
-      else:
-        token_type = TokenType.IDENTIFIER
-            
-      return Token(token_type, id_str)
+
+        if id_str in TokenType.keywords:
+            token_type = TokenType.KEYWORD
+
+            if id_str == "REM":
+                self.ignore_comment()
+                return Token(TokenType.KEYWORD, id_str)
+
+            elif id_str.upper() == "GOTO":
+                if self.peek_ahead().isnumeric():
+                    self.advance()
+                    return Token(TokenType.KEYWORD, id_str, self.get_goto_line())
+
+        else:
+            token_type = TokenType.IDENTIFIER
+
+        return Token(token_type, id_str)
 
     def get_goto_line(self):
         return self.create_number().value
-
