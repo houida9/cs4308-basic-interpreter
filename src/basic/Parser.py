@@ -10,6 +10,7 @@ class Parser:
         self.index = 0
         self.keywords = TokenType.keywords
         self.Tree = Node("")
+        self.AST = Node("")
         self.currNode = self.Tree
         self.symbolTable = {}
         self.IDinUse = False
@@ -51,7 +52,6 @@ class Parser:
                 if t.type == "KEYWORD":
                     k = Node("Keyword")
                     if t.goto is not None:
-                        breakpoint()
                         self.keyword(t.value + ":" + str(t.goto), k)
                         self.currNode = k
                         self.add_node(k, statement)
@@ -74,12 +74,21 @@ class Parser:
                                     n.checked = True
 
                         self.expression(tok[tok.index(t) + 1:index], statement)
-
                     else:
                         c = Node("Char")
                         self.currNode = c
                         self.add_node(Node(t.value), c)
                         self.add_node(c, statement)
+
+                        if t.value == 'EQUAL':
+                            temp_token = tok[tok.index(t)]
+                            index = tok.index(t)
+                            while index < len(tok):
+                                index += 1
+                                if index != len(tok):
+                                    temp_token = tok[index]
+                                    temp_token.checked = True
+                            self.expression(tok[tok.index(t) + 1:], statement, 'Assignment_Expression')
 
                 if t.type in (TokenType.INT, TokenType.STRING, TokenType.IDENTIFIER, TokenType.FLOAT):
                     value = Node('Value', statement)
@@ -134,9 +143,9 @@ class Parser:
             if next_tokens and next_tokens[0] and next_tokens[0].value == 'EQUAL':
                 self.symbolTable[iden] = next_tokens[1].value
 
-    def expression(self, ex, curr_node):
+    def expression(self, ex, curr_node, name='Expression'):
         s = curr_node
-        e = Node('Expression', parent=curr_node)
+        e = Node(name, parent=curr_node)
 
         if ex and ex[0] and ex[0].value == 'LEFT_PAREN':
             self.create_expression_list(ex[1:], e)
@@ -162,13 +171,28 @@ class Parser:
 def print_tree(parse_tree):
     for pre, fill, node in RenderTree(parse_tree.Tree):
         print("%s%s" % (pre, node.name))
-
+#in progress
+def create_ast(tree):
+    pass
+    '''
+    if tree.children[0].name == 'Program':
+        statements = tree.children[0].children
+        for i in range(0,len(statements), 1):
+            statement = statements[i].children
+            for n in range(0, len(statement), 1):
+                for temp in statement:
+                    if temp.name in ('Expression','Assignment_Expression'):
+                        expr = temp.children
+                        for e in expr:
+                            if 
+    '''
 
 def run(file_path):
     lexer = Scanner()
     lexer.scan(file_path)
     lexer.create_tokens()
     parse_tree = Parser(lexer.tokens)
+    create_ast(parse_tree.Tree)
     print_tree(parse_tree)
 
 
