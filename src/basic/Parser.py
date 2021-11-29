@@ -65,6 +65,10 @@ class Parser:
                 if t.type == "CHAR":
 
                     if t.value == 'LEFT_PAREN':
+                        c = Node("Char")
+                        self.currNode = c
+                        self.add_node(Node(t.value), c)
+                        self.add_node(c, statement)
                         index = len(tok) - 1
                         for i in range(len(tok) - 1, 0, -1):
                             temp_token = Token('CHAR', 'RIGHT_PAREN')
@@ -196,4 +200,4 @@ def run(file_path):
     print_tree(parse_tree)
 
 
-run('example1.bas')
+run('basic_programs/example1.bas')
