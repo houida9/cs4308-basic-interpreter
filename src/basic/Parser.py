@@ -145,7 +145,8 @@ class Parser:
     def handle_identifier(self, iden, next_tokens):
         if self.IDinUse and self.assignment:
             if next_tokens and next_tokens[0] and next_tokens[0].value == 'EQUAL':
-                self.symbolTable[iden] = next_tokens[1].value
+                if isinstance(next_tokens[1].value, int) or isinstance(next_tokens[1].value, float):
+                    self.symbolTable[iden] = next_tokens[1].value
 
     def expression(self, ex, curr_node, name='Expression'):
         s = curr_node
@@ -198,6 +199,7 @@ def run(file_path):
     parse_tree = Parser(lexer.tokens)
     create_ast(parse_tree.Tree)
     print_tree(parse_tree)
+    breakpoint()
 
 
-run('basic_programs/example1.bas')
+run('example1.bas')
